@@ -3,12 +3,17 @@ from datetime import datetime
 
 from sender import PyMS
 import requests
+import sys
 
-client = MongoClient('mongodb://localhost/')
-db = client.sms_reminder
-user = db['user']
+client = MongoClient('mongodb://heroku_6k3891bs:73gsp23uusn3j7adgsk7fr75pg@ds263590.mlab.com:63590/heroku_6k3891bs')
+db = client['heroku_6k3891bs']
+user_collection = db['user']
 
-pyms = PyMS()
+if len(sys.argv) != 3:
+    print('Usage: `python3 reminder_sender.py <gmail user> <gmail pass>`')
+    sys.exit(1)
+
+pyms = PyMS(username=sys.argv[1], password=sys.argv[2])
 pyms.connect()
 
 carriers = {
@@ -29,7 +34,7 @@ carriers = {
 reminder_collection = db['reminder']
 reminders = reminder_collection.find({'sent': False, 'timeToSend': {'$lte': datetime.utcnow()}})
 for reminder in reminders:
-    user = user.find_one({'_id': reminder['userId']})
+    user = user_collection.find_one({'_id': reminder['userId']})
     pyms.send_sms(str(int(user['phone'])), carriers[user['carrier']], reminder['content'])
     reminder_collection.update({'_id': reminder['_id']}, {'$set': {'sent': True}})
     print('Sending "' + reminder['content'] + '" to ' + user['username'])
@@ -78,9 +83,9 @@ for subscription in subscriptions:
     minute = datetime.now().minute
     reminder_minutes = hour * 60 + minute
 
-    if reminder_minutes - send_minutes < 5:
-        message = requests.get('http://localhost:3000/api/recurring/example/' + subscription['recurringReminder']).text
-        user = user.find_one({'_id': subscription['userId']})
+    if send_minutes == reminder_minutes:
+        message = requests.get('https://wrr-webdev-project-node.herokuapp.com/api/recurring/example/' + subscription['recurringReminder']).text
+        user = user_collection.find_one({'_id': subscription['userId']})
         pyms.send_sms(str(int(user['phone'])), carriers[user['carrier']], message)
 
 pyms.disconnect()

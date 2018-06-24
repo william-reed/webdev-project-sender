@@ -1,6 +1,6 @@
 import smtplib
 import os
-
+from email.mime.text import MIMEText
 
 class PyMS:
     """
@@ -47,4 +47,4 @@ class PyMS:
         :param message: message body
         :return: self for chaining
         """
-        self.smtpserver.sendmail(self.username, [phone_number + gateway], message)
+        self.smtpserver.sendmail(self.username, [phone_number + gateway], MIMEText(message.encode('utf-8'), _charset='utf-8').as_string())
